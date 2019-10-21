@@ -1,4 +1,4 @@
-package pkg
+package main
 
 import "container/heap"
 
