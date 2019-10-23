@@ -67,6 +67,8 @@ type puzzleSolver struct {
 	maxHeap int
 	start   *puzzle
 	end     map[int]*coor
+	closed  int
+	rpt     *puzzle
 }
 
 func duplicateArray(matrix puzzMap) puzzMap {
@@ -149,26 +151,41 @@ func manhatanDistance(start *puzzle, end map[int]*coor) int {
 	return int(sum)
 }
 func titlesOutOfPlace(start *puzzle, end map[int]*coor) int {
-	return 2
+	var sum float64
+	for y, h := range start.mapa {
+		for x, v := range h {
+			st := end[v]
+			if st.x != x || st.y != y {
+				sum = sum + 1
+			}
+		}
+	}
+	return int(sum)
 }
 func euclideanDistance(start *puzzle, end map[int]*coor) int {
-	return 3
+	var sum float64
+	for y, h := range start.mapa {
+		for x, v := range h {
+			st := end[v]
+			//fmt.Printf("%d %d \n", x, y)
+			sum = math.Sqrt((math.Pow(float64(st.x-x), 2))+math.Abs(math.Pow(float64(st.y-y), 2))) + sum
+			//fmt.Printf("%f \n", h)
+		}
+	}
+	//fmt.Printf("%f\n", sum)
+	return int(sum)
 }
 
 func addAlgoritm(s string) alghoritmoD {
 	switch s {
 	case "mh":
-		a := manhatanDistance
-		return a
+		return manhatanDistance
 	case "to":
-		a := titlesOutOfPlace
-		return a
+		return titlesOutOfPlace
 	case "ed":
-		a := euclideanDistance
-		return a
+		return euclideanDistance
 	default:
-		a := manhatanDistance
-		return a
+		return manhatanDistance
 	}
 }
 func checkDict(pu *puzzle, ps *puzzleSolver) bool {
@@ -193,51 +210,56 @@ func coordPuzzle(end *puzzle) map[int]*coor {
 	}
 	return m
 }
-func createSolver(start *puzzle, end *puzzle, algh string) puzzleSolver {
+func createSolver(start *puzzle, end *puzzle, algh string) *puzzleSolver {
 
 	so := puzzleSolver{
 		algh:    addAlgoritm(algh),
 		dict:    make(map[string]int),
 		heap:    make(PriorityQueue, 1),
-		maxHeap: 0,
+		maxHeap: 1,
 		start:   start,
 		end:     coordPuzzle(end),
+		closed:  0,
+		rpt:     nil,
 	}
 
 	so.heap[0] = start
-	return so
+	return &so
 }
 
-func (p puzzleSolver) Solve() puzzle {
+func (p *puzzleSolver) Solve() {
 	heap.Init(&(p.heap))
-	t := 0
-	for p.heap.Len() > 0 {
-		t++
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("error")
+			return
+		}
+	}()
+	for {
 		item := heap.Pop(&p.heap).(*puzzle)
+		p.maxHeap--
 		arrayPuzzles := createArrayPuzzle(item)
 		for i, _ := range arrayPuzzles {
 			puzzle := arrayPuzzles[i]
-			if checkDict(&puzzle, &p) {
+			if checkDict(&puzzle, p) {
+				p.maxHeap++
 				alghD := p.algh(&puzzle, p.end)
 				if alghD == 0 {
-					return puzzle
+					p.rpt = &puzzle
+					p.closed = len(p.dict) - p.maxHeap
+					return
 				}
 				//fmt.Printf("%d \n", alghD)
 				puzzle.score = puzzle.depth + alghD
 				heap.Push(&p.heap, &puzzle)
-				fmt.Printf("%+v \n", puzzle)
 			}
 		}
-		if t == 100 {
-			break
-		}
 	}
-	return *p.start
 }
 
-func main() {
+func executeOrder66() {
 	a := puzzle{
-		mapa:  puzzMap{{0, 2, 3}, {1, 4, 5}, {8, 7, 6}},
+		mapa:  puzzMap{{5, 7, 1}, {6, 0, 2}, {4, 3, 8}},
 		side:  3,
 		depth: 0,
 		score: 10,
@@ -252,10 +274,20 @@ func main() {
 		dad:   nil,
 		index: 0,
 	}
-	mh := "mh"
+	mh := "ed"
 	solver := createSolver(&a, &b, mh)
-	fmt.Println(solver.Solve())
-	//arrayPuzzles := createArrayPuzzle(&a)
+	solver.Solve()
+	// fmt.Println(h)
+	// for h.dad != nil {
+	// 	fmt.Printf("%d \n", h.mapa)
+	// 	h = *h.dad
+	// }
+	// fmt.Printf("%d \n", h.mapa)
+	// arrayPuzzles := createArrayPuzzle(&a)
 
-	//fmt.Printf("%v %+v", a, a)
+	fmt.Printf("%v", solver.closed)
+}
+
+func main() {
+	executeOrder66()
 }
